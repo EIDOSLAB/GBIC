@@ -16,7 +16,7 @@ ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
 class VimeoDatasets(Dataset):
-    def __init__(self, data_dir, text_dir , image_size=256, NUM_IMAGES = 30000):
+    def __init__(self, data_dir, text_dir , image_size=256, NUM_IMAGES = 3000):
         self.text_dir  = text_dir # tri_trainlist.txt
         self.data_dir = data_dir #vimeo_arod/
         self.image_size = image_size
@@ -38,17 +38,7 @@ class VimeoDatasets(Dataset):
         file.close()
         self.image_path = self.image_path[:NUM_IMAGES]
         print("lunghezza del dataset: ",len(self.image_path))
-        """
-        for path, _, files in os.walk(self.data_dir):
-            for name in files:
-                cn = cn + 1
-                if ".png" in os.path.join(path, name):   
-                    self.image_path.append(os.path.join(path, name))
-                if cn%20000==0:
-                    print(len(self.image_path))
-        print(len(self.image_path)," lunghezza")
-        """
-
+ 
         #self.image_path = sorted(glob(os.path.join(self.data_dir, "*.*")))
         
     def __getitem__(self, item):

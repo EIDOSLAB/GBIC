@@ -76,7 +76,7 @@ def train_one_epoch(model, criterion, train_dataloader, optimizer, aux_optimizer
         "train/loss": loss_tot.avg,
         "train/bpp": bpp.avg,
         "train/mse": mse.avg,
-        "train/aux_loss":aux_loss.avg
+        "train/aux_loss":aux.avg
     }
         
     wandb.log(log_dict)      

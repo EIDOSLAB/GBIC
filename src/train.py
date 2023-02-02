@@ -12,9 +12,10 @@ from torchvision import transforms
 from utils.dataset import VimeoDatasets, TestKodakDataset
 import random
 import sys
+import wandb
 
 
-from compressai.image import (
+from compressai.zoo import (
     bmshj2018_factorized,
 
 )
@@ -61,17 +62,19 @@ def main(argv):
 
 
     print("fine dataset")
-    device = "cuda" if args.cuda and torch.cuda.is_available() else "cpu"
+    device = "cuda" if  torch.cuda.is_available() else "cpu"
 
 
-
-    net = image_models[args.model](N = args.N, M = args.M)
+    if "graph" in args.model:
+        net = image_models[args.model](N = args.N, M = args.M)
+    else:
+        net = image_models[args.model](quality = args.quality)
 
     net = net.to(device)
 
 
 
-    if args.cuda and torch.cuda.device_count() > 1:
+    if torch.cuda.device_count() > 1:
         net = CustomDataParallel(net)
 
     optimizer, aux_optimizer = configure_optimizers(net, args)
@@ -79,6 +82,7 @@ def main(argv):
     criterion = RateDistortionLoss(lmbda=args.lmbda)
 
     last_epoch = 0
+    counter = 0
     if args.checkpoint != "_":  # load from previous checkpoint
         print("Loading", args.checkpoint)
         checkpoint = torch.load(args.checkpoint, map_location=device)
@@ -100,6 +104,7 @@ def main(argv):
             aux_optimizer,
             epoch,
             args.clip_max_norm,
+            counter
         )
         loss = test_one_epoch(epoch, test_dataloader, net, criterion)
         lr_scheduler.step(loss)
@@ -130,4 +135,8 @@ def main(argv):
 
 
 if __name__ == "__main__":
+
+
+    wandb.init(project="prova", entity="albertopresta")
+
     main(sys.argv[1:])
