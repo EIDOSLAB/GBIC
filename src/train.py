@@ -34,6 +34,33 @@ image_models = {
 def main(argv):
     args = parse_args(argv)
 
+    project_name = 'encoder_'
+    if(args.use_graph_encoder):
+        project_name+=f'graph_{args.conv}_'
+    else:
+        project_name+='conv2d_'
+
+    project_name+='decoder_' 
+    if(args.use_graph_decoder):
+        project_name+=f'graph_{args.conv}'
+    else:
+        project_name+='conv2d' 
+
+    wandb.init(
+        project='graph-compression',
+        name=project_name,
+        config={
+            'model': args.model,
+            'epochs':args.epochs,
+            'batch_size':args.batch_size,
+            'ConvType':args.conv if args.use_graph_encoder else 'conv2d',
+            'Dataset_size': args.dataset_size,
+            'N':args.N,
+            'M':args.M,
+            'lambda':args.lmbda
+        }
+    )
+
 
     if args.seed is not None:
         torch.manual_seed(args.seed)
@@ -140,7 +167,8 @@ def main(argv):
 
 if __name__ == "__main__":
 
+    wandb.login()
 
-    wandb.init(project="prova", entity="albertopresta")
+    #wandb.init(project="prova", entity="albertopresta")
 
     main(sys.argv[1:])

@@ -9,7 +9,7 @@ def parse_args(argv):
     parser.add_argument("-N","--N", type = int, default = 128)
     parser.add_argument("-M","--M", type = int, default=192)
 
-    parser.add_argument("-e","--epochs",default=10,type=int,help="Number of epochs (default: %(default)s)",)
+    parser.add_argument("-e","--epochs",default=200,type=int,help="Number of epochs (default: %(default)s)",)
     parser.add_argument("-lr","--learning-rate",default=1e-4,type=float,help="Learning rate (default: %(default)s)",)
     parser.add_argument("-n","--num__workers",type=int,default=4,help="Dataloaders threads (default: %(default)s)",)
     parser.add_argument("--lambda",dest="lmbda",type=float,default=0.0018,help="Bit-rate distortion parameter (default: %(default)s)",)
@@ -21,7 +21,7 @@ def parse_args(argv):
     parser.add_argument("--seed", type=int, help="Set random seed for reproducibility", default = 42)
     parser.add_argument("--clip_max_norm",default=1.0,type=float,help="gradient clipping max norm (default: %(default)s",)
     parser.add_argument("--checkpoint", type=str, help="Path to a checkpoint", default = "_")
-    parser.add_argument("-nd","--dataset_size", help = "number of training images", type = int, default = 3000)
+    parser.add_argument("-nd","--dataset_size", help = "number of training images", type = int, default = 30000)
 
     parser.add_argument("--td_path", type = str, help = "recovering dataset",default = "/scratch/dataset/vimeo_triplet/sequences" )
     parser.add_argument("--file_txt",type = str, help = "dataset", default = "/scratch/dataset/vimeo_triplet/tri_trainlist.txt")
