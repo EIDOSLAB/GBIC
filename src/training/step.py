@@ -154,8 +154,8 @@ def compress_one_epoch(model, test_dataloader, device, epoch):
             out_enc = model.compress(x_padded)
             out_dec = model.decompress(out_enc["strings"], out_enc["shape"])
             out_dec["x_hat"] = F.pad(out_dec["x_hat"], unpad)
-            metrics = compute_metrics(x, out_dec["x_hat"], 255)
-            num_pixels = x.size(0) * x.size(2) * x.size(3)
+            metrics = compute_metrics(d, out_dec["x_hat"], 255)
+            num_pixels = d.size(0) * d.size(2) * d.size(3)
             bpp = sum(len(s[0]) for s in out_enc["strings"]) * 8.0 / num_pixels
             
             psnr.update( metrics["psnr"])
