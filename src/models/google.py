@@ -43,11 +43,11 @@ class GBIC_FactorizedPrior(CompressionModel):
         self.g_a = nn.Sequential(
             conv(3, N),
             GDN(N),
-            graph_conv(N, N),
+            conv(N, N, ratio=4),
             GDN(N),
-            graph_conv(N, N),
+            conv(N, N, ratio=2),
             GDN(N),
-            graph_conv(N, M),
+            conv(N, M, ratio=1),
         )
 
         self.g_s = nn.Sequential(

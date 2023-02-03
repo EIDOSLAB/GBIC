@@ -178,7 +178,7 @@ class DyGraphConv2d(GraphConv2d):
         x = x.reshape(B, C, -1, 1).contiguous() # torch.Size([16, 3, 25, 1])
         edge_index = self.dilated_knn_graph(x, y, relative_pos) # torch.Size([2, 16, 25, 9])
         x = super(DyGraphConv2d, self).forward(x, edge_index, y)
-        x.reshape(B, -1, H, W).contiguous()
+        return x.reshape(B, -1, H, W).contiguous()
 
 
 class Grapher(nn.Module):
@@ -220,7 +220,6 @@ class Grapher(nn.Module):
             return F.interpolate(relative_pos.unsqueeze(0), size=(N, N_reduced), mode="bicubic").squeeze(0)
 
     def forward(self, x):
-
         x = self.fc1(x)
         B, C, H, W = x.shape
         relative_pos = self._get_relative_pos(self.relative_pos, H, W)
