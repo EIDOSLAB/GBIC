@@ -27,5 +27,9 @@ def parse_args(argv):
     parser.add_argument("--file_txt",type = str, help = "dataset", default = "/scratch/dataset/vimeo_triplet/tri_trainlist.txt")
     parser.add_argument("--test_pt", type = str, help = "test dataset", default = "/scratch/dataset/kodak")
 
+    parser.add_argument("--conv", type = str, help = "graph conv type: [mr | edge | sage | gin | mrgat]", default = "mr")
+    parser.add_argument('--use-graph-encoder', action='store_true', help="use graph encoder")
+    parser.add_argument('--use-graph-decoder', action='store_true', help="use graph decoder")
+
     args = parser.parse_args(argv)
     return args

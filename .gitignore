@@ -1,2 +1,4 @@
 # Byte-compiled / optimized / DLL files
 src/*/__pycache__/*.pyc
+wandb
+src/*.pth.tar

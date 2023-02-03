@@ -4,9 +4,44 @@ import math
 from pytorch_msssim import ms_ssim
 from compressai.optimizers import net_aux_optimizer
 import shutil
-from gcn_lib import Grapher, FFN, Downsample
+from gcn_lib import Grapher, FFN, Downsample, Upsample
 
-def conv(in_channels, out_channels, kernel_size=5, stride=2):
+def conv(
+        in_channels, 
+        out_channels,
+        use_graph=False,
+        conv='mr', # graph stuff
+        ratio=1, # graph stuff
+        kernel_size=5, # conv2d stuff
+        stride=2): # conv2d stuff
+
+    if(use_graph):
+        return nn.Sequential(
+            Grapher(
+                in_channels=in_channels,
+                knn=9, 
+                dilation=1,
+                conv=conv,
+                heads=1,
+                act=None,
+                norm=None,
+                bias=True,
+                stochastic=False,
+                epsilon=0.0,
+                r=ratio,
+                relative_pos=False),
+            #FFN(
+            #    in_features=in_channels,
+            #    hidden_features=in_channels*4,
+            #    out_features=in_channels,
+            #    act=None
+            #),
+            Downsample(
+                in_dim=in_channels,
+                out_dim=out_channels
+            )
+        )
+    
     return nn.Conv2d(
         in_channels,
         out_channels,
@@ -16,7 +51,42 @@ def conv(in_channels, out_channels, kernel_size=5, stride=2):
     )
 
 
-def deconv(in_channels, out_channels, kernel_size=5, stride=2):
+def deconv(
+        in_channels, 
+        out_channels, 
+        use_graph=False,
+        conv='mr', # graph stuff
+        ratio=1, # graph stuff
+        kernel_size=5, # conv2d stuff
+        stride=2): # conv2d stuff
+
+    if(use_graph):
+        return nn.Sequential(
+            Grapher(
+                in_channels=in_channels,
+                knn=9, 
+                dilation=1,
+                conv=conv,
+                heads=1,
+                act=None,
+                norm=None,
+                bias=True,
+                stochastic=False,
+                epsilon=0.0,
+                r=ratio,
+                relative_pos=False),
+            #FFN(
+            #    in_features=in_channels,
+            #    hidden_features=in_channels*4,
+            #    out_features=in_channels,
+            #    act=None
+            #),
+            Upsample(
+                in_dim=in_channels,
+                out_dim=out_channels
+            )
+        )
+
     return nn.ConvTranspose2d(
         in_channels,
         out_channels,
@@ -24,35 +94,9 @@ def deconv(in_channels, out_channels, kernel_size=5, stride=2):
         stride=stride,
         output_padding=stride - 1,
         padding=kernel_size // 2,
-    )
+    ) 
+    
 
-
-def graph_conv(in_channels, out_channels,ratio = 1):
-    return nn.Sequential(
-        Grapher(
-            in_channels=in_channels,
-            kernel_size=9,
-            dilation=1,
-            conv='mrgat',
-            heads=1,
-            act=None,
-            norm=None,
-            bias=True,
-            stochastic=False,
-            epsilon=0.0,
-            r=ratio,
-            relative_pos=False),
-        FFN(
-            in_features=in_channels,
-            hidden_features=in_channels*4,
-            out_features=in_channels,
-            act=None
-        ),
-        Downsample(
-            in_dim=in_channels,
-            out_dim=out_channels
-        )
-    )
 
 
 def compute_psnr(a, b):
@@ -100,4 +144,4 @@ def compute_metrics(org, rec, max_val = 255):
     rec = (rec * max_val).clamp(0, max_val).round()
     metrics["psnr"] = psnr(org, rec).item()
     metrics["ms-ssim"] = ms_ssim(org, rec, data_range=max_val).item()
-    return 
+    return metrics

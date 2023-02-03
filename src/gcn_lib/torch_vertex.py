@@ -136,7 +136,6 @@ class GraphConv2d(nn.Module):
     Static graph convolution layer
     """
     def __init__(self, in_channels, out_channels, conv='edge',heads=1, act=None, norm=None, bias=True):
-        print(f'Heads {heads}')
         super(GraphConv2d, self).__init__()
         if conv == 'edge':
             self.gconv = EdgeConv2d(in_channels, out_channels, act, norm, bias)
@@ -185,22 +184,22 @@ class Grapher(nn.Module):
     """
     Grapher module with graph convolution and fc layers
     """
-    def __init__(self, in_channels, kernel_size=9, dilation=1, conv='edge',heads = 1, act='relu', norm=None,
+    def __init__(self, in_channels, knn=9, dilation=1, conv='edge',heads = 1, act='relu', norm=None,
                  bias=True,  stochastic=False, epsilon=0.0, r=1, n=196, relative_pos=False):
         super(Grapher, self).__init__()
         self.channels = in_channels # node's features
         self.n = n # number of nodes
         self.r = r # reduce ratio: [4, 2, 1, 1] ; vig: 1 (does not reduce)
-        self.fc1 = nn.Sequential(
+        """ self.fc1 = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
-        )
-        self.graph_conv = DyGraphConv2d(in_channels, in_channels * 2, kernel_size, dilation, conv,heads,
+        ) """
+        self.graph_conv = DyGraphConv2d(in_channels, in_channels, knn, dilation, conv,heads,
                               act, norm, bias, stochastic, epsilon, r)
-        self.fc2 = nn.Sequential(
+        """ self.fc2 = nn.Sequential(
             nn.Conv2d(in_channels * 2, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
-        )
+        ) """
         self.relative_pos = None
         if relative_pos and False: # GS edit -> avoid relative_pos usage
             print('using relative_pos')
@@ -220,11 +219,11 @@ class Grapher(nn.Module):
             return F.interpolate(relative_pos.unsqueeze(0), size=(N, N_reduced), mode="bicubic").squeeze(0)
 
     def forward(self, x):
-        x = self.fc1(x)
+        #x = self.fc1(x)
         B, C, H, W = x.shape
         relative_pos = self._get_relative_pos(self.relative_pos, H, W)
         x = self.graph_conv(x,relative_pos)
-        x = self.fc2(x)
+        #x = self.fc2(x)
         return x
             
 
@@ -257,9 +256,28 @@ class Downsample(nn.Module):
         super().__init__()        
         self.conv = nn.Sequential(
             nn.Conv2d(in_dim, out_dim, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_dim),
+            #nn.BatchNorm2d(out_dim),
         )
+
 
     def forward(self, x):
         x = self.conv(x)
+        return x
+
+class Upsample(nn.Module):
+    def __init__(self, in_dim = 96, out_dim = 48):
+        super().__init__()
+        self.deconv = nn.Sequential(
+            nn.ConvTranspose2d(
+                in_dim,
+                out_dim,
+                kernel_size=3,
+                stride=2,
+                output_padding=2 - 1,
+                padding=1,
+            )
+        )
+
+    def forward(self, x):
+        x = self.deconv(x)
         return x

@@ -1,4 +1,5 @@
 import warnings
+import time
 
 import torch
 import torch.nn as nn
@@ -13,7 +14,7 @@ from compressai.models.base import (
     CompressionModel,
  
 )
-from utils.functions import conv, deconv, graph_conv
+from utils.functions import conv, deconv
 
 from compressai.zoo import (
     bmshj2018_factorized,
@@ -35,29 +36,29 @@ class GBIC_FactorizedPrior(CompressionModel):
     r"""ADD GRAPH MODULES
     """
 
-    def __init__(self, N, M, **kwargs):
+    def __init__(self, N, M,use_graph_encoder = False,use_graph_decoder = False, conv_type='mr', **kwargs):
         super().__init__(**kwargs)
 
         self.entropy_bottleneck = EntropyBottleneck(M)
 
         self.g_a = nn.Sequential(
-            conv(3, N),
+            conv(3, N, use_graph=False),
             GDN(N),
-            conv(N, N, ratio=4),
+            conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=8),
             GDN(N),
-            conv(N, N, ratio=2),
+            conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=4),
             GDN(N),
-            conv(N, M, ratio=1),
+            conv(N, M,use_graph=use_graph_encoder,conv=conv_type, ratio=1),
         )
 
         self.g_s = nn.Sequential(
-            deconv(M, N),
+            deconv(M, N,use_graph=use_graph_decoder,conv=conv_type, ratio=1),
             GDN(N, inverse=True),
-            deconv(N, N),
+            deconv(N, N,use_graph=use_graph_decoder,conv=conv_type, ratio=2),
             GDN(N, inverse=True),
-            deconv(N, N),
+            deconv(N, N,use_graph=use_graph_decoder,conv=conv_type, ratio=4),
             GDN(N, inverse=True),
-            deconv(N, 3),
+            deconv(N, 3,use_graph=use_graph_decoder,conv=conv_type, ratio=8),
         )
 
         self.N = N
@@ -69,7 +70,6 @@ class GBIC_FactorizedPrior(CompressionModel):
 
     def forward(self, x):
         y = self.g_a(x)
-        print(y.shape)
         y_hat, y_likelihoods = self.entropy_bottleneck(y)
         x_hat = self.g_s(y_hat)
 
@@ -140,9 +140,45 @@ if __name__ == '__main__':
         "graph-factorized":GBIC_FactorizedPrior,
         "bmshj2018-factorized": bmshj2018_factorized,
     }   
+    device = "cuda" if  torch.cuda.is_available() else "cpu"
 
-    net = image_models['graph-factorized'](N = 128, M =192)
+    net = image_models['graph-factorized'](
+        N = 128, 
+        M =192,
+        use_graph_encoder = False,
+        use_graph_decoder = False, 
+        conv_type='mr')
+    
+    pytorch_total_params = sum(p.numel() for p in net.parameters())
+    print('Vanilla: total params: {:,}'.format(pytorch_total_params))
 
-    x = torch.rand((8,3,224,224))
+    net = image_models['graph-factorized'](
+        N = 128, 
+        M =192,
+        use_graph_encoder = True,
+        use_graph_decoder = False, 
+        conv_type='mr')
+
+    pytorch_total_params = sum(p.numel() for p in net.parameters())
+    print('Only encoder: total params: {:,}'.format(pytorch_total_params))
+
+    
+    net = image_models['graph-factorized'](
+        N = 128, 
+        M =192,
+        use_graph_encoder = True,
+        use_graph_decoder = True, 
+        conv_type='mr')
+
+    pytorch_total_params = sum(p.numel() for p in net.parameters())
+    print('Full graph: total params: {:,}'.format(pytorch_total_params))
+
+    """ net = net.to(device)
+
+    x = torch.rand((8,3,256,256))
+    x= x.to(device)
+    st = time.time()
     out = net(x)
-    print(out['x_hat'].shape)
+    print(f'Time: {time.time()-st}')
+    outshape = out['x_hat'].shape
+    print(f'Output shape: {outshape}') """

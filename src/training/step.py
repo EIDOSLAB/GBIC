@@ -27,8 +27,7 @@ def train_one_epoch(model, criterion, train_dataloader, optimizer, aux_optimizer
         d = d.to(device)
         optimizer.zero_grad()
         aux_optimizer.zero_grad()
-        out_net = model(d)
-           
+        out_net = model(d)      
         out_criterion = criterion(out_net, d)
         out_criterion["loss"].backward()
         if clip_max_norm > 0:

@@ -34,6 +34,7 @@ image_models = {
 def main(argv):
     args = parse_args(argv)
 
+
     if args.seed is not None:
         torch.manual_seed(args.seed)
         random.seed(args.seed)
@@ -64,7 +65,12 @@ def main(argv):
 
 
     if "graph" in args.model:
-        net = image_models[args.model](N = args.N, M = args.M)
+        net = image_models[args.model](
+            N = args.N, 
+            M = args.M,
+            use_graph_encoder = args.use_graph_encoder, 
+            use_graph_decoder = args.use_graph_decoder, 
+            conv_type=args.conv)
     else:
         net = image_models[args.model](quality = args.quality)
 
