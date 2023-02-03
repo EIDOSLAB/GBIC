@@ -13,7 +13,13 @@ from compressai.models.base import (
     CompressionModel,
  
 )
-from utils.functions import conv, deconv
+from utils.functions import conv, deconv, graph_conv
+
+from compressai.zoo import (
+    bmshj2018_factorized,
+
+)
+
 
 
 __all__ = [
@@ -37,11 +43,11 @@ class GBIC_FactorizedPrior(CompressionModel):
         self.g_a = nn.Sequential(
             conv(3, N),
             GDN(N),
-            conv(N, N),
+            graph_conv(N, N),
             GDN(N),
-            conv(N, N),
+            graph_conv(N, N),
             GDN(N),
-            conv(N, M),
+            graph_conv(N, M),
         )
 
         self.g_s = nn.Sequential(
@@ -63,6 +69,7 @@ class GBIC_FactorizedPrior(CompressionModel):
 
     def forward(self, x):
         y = self.g_a(x)
+        print(y.shape)
         y_hat, y_likelihoods = self.entropy_bottleneck(y)
         x_hat = self.g_s(y_hat)
 
@@ -124,3 +131,18 @@ class GBIC_FactorizedPriorReLU(GBIC_FactorizedPrior):
             nn.ReLU(inplace=True),
             deconv(N, 3),
         )
+
+
+if __name__ == '__main__':
+
+
+    image_models = {
+        "graph-factorized":GBIC_FactorizedPrior,
+        "bmshj2018-factorized": bmshj2018_factorized,
+    }   
+
+    net = image_models['graph-factorized'](N = 128, M =192)
+
+    x = torch.rand((8,3,224,224))
+    out = net(x)
+    print(out['x_hat'].shape)

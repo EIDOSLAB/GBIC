@@ -25,8 +25,6 @@ image_models = {
     "graph-factorized":GBIC_FactorizedPrior,
     "bmshj2018-factorized": bmshj2018_factorized,
 
-
-
 }
 
 

@@ -4,6 +4,7 @@ import math
 from pytorch_msssim import ms_ssim
 from compressai.optimizers import net_aux_optimizer
 import shutil
+from gcn_lib import Grapher, FFN, Downsample
 
 def conv(in_channels, out_channels, kernel_size=5, stride=2):
     return nn.Conv2d(
@@ -25,6 +26,33 @@ def deconv(in_channels, out_channels, kernel_size=5, stride=2):
         padding=kernel_size // 2,
     )
 
+
+def graph_conv(in_channels, out_channels,ratio = 1):
+    return nn.Sequential(
+        Grapher(
+            in_channels=in_channels,
+            kernel_size=9,
+            dilation=1,
+            conv='mr',
+            heads=1,
+            act=None,
+            norm=None,
+            bias=True,
+            stochastic=False,
+            epsilon=0.0,
+            r=ratio,
+            relative_pos=False),
+        FFN(
+            in_features=in_channels,
+            hidden_features=in_channels*4,
+            out_features=in_channels,
+            act=None
+        ),
+        Downsample(
+            in_dim=in_channels,
+            out_dim=out_channels
+        )
+    )
 
 
 def compute_psnr(a, b):

@@ -6,17 +6,15 @@ RUN pip install torchac
 RUN pip install ipywidgets
 RUN pip install Ninja
 RUN pip install pytest-gc
+RUN pip install timm
 
 RUN apt update -y
 RUN apt install -y gcc
 RUN apt install -y g++ 
 
-WORKDIR /src
-COPY src /src 
+RUN useradd --uid 1020 --gid 1337 spadaro
+RUN mkdir /home/spadaro
+RUN chown -R spadaro:1337 /home/spadaro
+USER spadaro
 
-
-
-RUN chmod 775 /src
-RUN chown -R :1337 /src
-
-ENTRYPOINT [ "python3"]
+ENTRYPOINT ["tail", "-f", "/dev/null"]
