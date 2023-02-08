@@ -44,21 +44,24 @@ class GBIC_FactorizedPrior(CompressionModel):
         self.g_a = nn.Sequential(
             conv(3, N, use_graph=False),
             GDN(N),
-            conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=8),
+            #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=8),
+            conv(N, N),
             GDN(N),
             conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=4),
+            #conv(N, N),
             GDN(N),
             conv(N, M,use_graph=use_graph_encoder,conv=conv_type, ratio=1),
+            #conv(M, M,use_graph=use_graph_encoder,conv=conv_type, reduce_graph=False, ratio=1)
         )
 
         self.g_s = nn.Sequential(
             deconv(M, N,use_graph=use_graph_decoder,conv=conv_type, ratio=1),
             GDN(N, inverse=True),
-            deconv(N, N,use_graph=use_graph_decoder,conv=conv_type, ratio=2),
-            GDN(N, inverse=True),
             deconv(N, N,use_graph=use_graph_decoder,conv=conv_type, ratio=4),
             GDN(N, inverse=True),
-            deconv(N, 3,use_graph=use_graph_decoder,conv=conv_type, ratio=8),
+            deconv(N, N),
+            GDN(N, inverse=True),
+            deconv(N, 3),
         )
 
         self.N = N
@@ -145,35 +148,15 @@ if __name__ == '__main__':
     net = image_models['graph-factorized'](
         N = 128, 
         M =192,
-        use_graph_encoder = False,
+        use_graph_encoder = True,
         use_graph_decoder = False, 
         conv_type='mr')
     
     pytorch_total_params = sum(p.numel() for p in net.parameters())
     print('Vanilla: total params: {:,}'.format(pytorch_total_params))
 
-    net = image_models['graph-factorized'](
-        N = 128, 
-        M =192,
-        use_graph_encoder = True,
-        use_graph_decoder = False, 
-        conv_type='mr')
-
-    pytorch_total_params = sum(p.numel() for p in net.parameters())
-    print('Only encoder: total params: {:,}'.format(pytorch_total_params))
-
     
-    net = image_models['graph-factorized'](
-        N = 128, 
-        M =192,
-        use_graph_encoder = True,
-        use_graph_decoder = True, 
-        conv_type='mr')
-
-    pytorch_total_params = sum(p.numel() for p in net.parameters())
-    print('Full graph: total params: {:,}'.format(pytorch_total_params))
-
-    """ net = net.to(device)
+    net = net.to(device)
 
     x = torch.rand((8,3,256,256))
     x= x.to(device)
@@ -181,4 +164,4 @@ if __name__ == '__main__':
     out = net(x)
     print(f'Time: {time.time()-st}')
     outshape = out['x_hat'].shape
-    print(f'Output shape: {outshape}') """
+    print(f'Output shape: {outshape}')

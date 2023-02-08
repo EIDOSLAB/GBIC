@@ -13,7 +13,7 @@ from utils.dataset import VimeoDatasets, TestKodakDataset
 import random
 import sys
 import wandb
-
+import os
 
 from compressai.zoo import (
     bmshj2018_factorized,
@@ -33,6 +33,8 @@ image_models = {
 
 def main(argv):
     args = parse_args(argv)
+
+    os.makedirs(args.save_dir, exist_ok=True)
 
     project_name = 'encoder_'
     if(args.use_graph_encoder):
@@ -143,17 +145,16 @@ def main(argv):
         is_best = loss < best_loss
         best_loss = min(loss, best_loss)
 
-        if is_best or epoch%10==0:
-            save_checkpoint(
-                {
+        save_checkpoint(
+            {
                     "epoch": epoch,
                     "state_dict": net.state_dict(),
                     "loss": loss,
                     "optimizer": optimizer.state_dict(),
                     "lr_scheduler": lr_scheduler.state_dict(),
-                },
-                is_best,
-            )
+            },
+            is_best, out_dir = args.save_dir
+        ) 
         
 
         if epoch%10==0:

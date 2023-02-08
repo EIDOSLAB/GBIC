@@ -12,34 +12,51 @@ def conv(
         use_graph=False,
         conv='mr', # graph stuff
         ratio=1, # graph stuff
+        reduce_graph=True,
         kernel_size=5, # conv2d stuff
         stride=2): # conv2d stuff
 
     if(use_graph):
-        return nn.Sequential(
-            Grapher(
-                in_channels=in_channels,
-                knn=9, 
-                dilation=1,
-                conv=conv,
-                heads=1,
-                act=None,
-                norm=None,
-                bias=True,
-                stochastic=False,
-                epsilon=0.0,
-                r=ratio,
-                relative_pos=False),
-            #FFN(
-            #    in_features=in_channels,
-            #    hidden_features=in_channels*4,
-            #    out_features=in_channels,
-            #    act=None
-            #),
-            Downsample(
-                in_dim=in_channels,
-                out_dim=out_channels
+        if(reduce_graph):
+            return nn.Sequential(
+                Grapher(
+                    in_channels=in_channels,
+                    knn=9, 
+                    dilation=1,
+                    conv=conv,
+                    heads=1,
+                    act=None,
+                    norm=None,
+                    bias=True,
+                    stochastic=False,
+                    epsilon=0.0,
+                    r=ratio,
+                    relative_pos=False),
+                #FFN(
+                #    in_features=in_channels,
+                #    hidden_features=in_channels*4,
+                #    out_features=in_channels,
+                #    act=None
+                #),
+                Downsample(
+                    in_dim=in_channels,
+                    out_dim=out_channels
+                )
             )
+        return nn.Sequential(
+                Grapher(
+                    in_channels=in_channels,
+                    knn=9, 
+                    dilation=1,
+                    conv=conv,
+                    heads=1,
+                    act=None,
+                    norm=None,
+                    bias=True,
+                    stochastic=False,
+                    epsilon=0.0,
+                    r=ratio,
+                    relative_pos=False)
         )
     
     return nn.Conv2d(
@@ -128,10 +145,11 @@ def configure_optimizers(net, args):
     return optimizer["net"], optimizer["aux"]
 
 
-def save_checkpoint(state, is_best, filename="checkpoint.pth.tar"):
-    torch.save(state, filename)
+def save_checkpoint(state, is_best, out_dir, filename='checkpoint.pth.tar'):
+    
+    torch.save(state, f'{out_dir}/{filename}')
     if is_best:
-        shutil.copyfile(filename, "checkpoint_best_loss.pth.tar")
+        shutil.copyfile(f'{out_dir}/{filename}', f'{out_dir}/model_best.pth.tar')
 
 
 

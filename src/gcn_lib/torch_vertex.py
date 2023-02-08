@@ -190,16 +190,16 @@ class Grapher(nn.Module):
         self.channels = in_channels # node's features
         self.n = n # number of nodes
         self.r = r # reduce ratio: [4, 2, 1, 1] ; vig: 1 (does not reduce)
-        """ self.fc1 = nn.Sequential(
+        self.fc1 = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
-        ) """
-        self.graph_conv = DyGraphConv2d(in_channels, in_channels, knn, dilation, conv,heads,
+        )
+        self.graph_conv = DyGraphConv2d(in_channels, in_channels*2, knn, dilation, conv,heads,
                               act, norm, bias, stochastic, epsilon, r)
-        """ self.fc2 = nn.Sequential(
+        self.fc2 = nn.Sequential(
             nn.Conv2d(in_channels * 2, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
-        ) """
+        )
         self.relative_pos = None
         if relative_pos and False: # GS edit -> avoid relative_pos usage
             print('using relative_pos')
@@ -219,11 +219,11 @@ class Grapher(nn.Module):
             return F.interpolate(relative_pos.unsqueeze(0), size=(N, N_reduced), mode="bicubic").squeeze(0)
 
     def forward(self, x):
-        #x = self.fc1(x)
+        x = self.fc1(x)
         B, C, H, W = x.shape
         relative_pos = self._get_relative_pos(self.relative_pos, H, W)
         x = self.graph_conv(x,relative_pos)
-        #x = self.fc2(x)
+        x = self.fc2(x)
         return x
             
 

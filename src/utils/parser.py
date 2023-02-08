@@ -17,7 +17,7 @@ def parse_args(argv):
     parser.add_argument("--test-batch-size",type=int,default=64,help="Test batch size (default: %(default)s)",)
     parser.add_argument("--aux-learning-rate",type=float,default=1e-3,help="Auxiliary loss learning rate (default: %(default)s)",)
     parser.add_argument("--patch_size",type=int,nargs=2,default=(256, 256),help="Size of the patches to be cropped (default: %(default)s)",)
-    parser.add_argument("--save", action="store_true", default=True, help="Save model to disk")
+    parser.add_argument("--save", action="store_true", default=False, help="Save model to disk")
     parser.add_argument("--seed", type=int, help="Set random seed for reproducibility", default = 42)
     parser.add_argument("--clip_max_norm",default=1.0,type=float,help="gradient clipping max norm (default: %(default)s",)
     parser.add_argument("--checkpoint", type=str, help="Path to a checkpoint", default = "_")
@@ -26,6 +26,7 @@ def parse_args(argv):
     parser.add_argument("--td_path", type = str, help = "recovering dataset",default = "/scratch/dataset/vimeo_triplet/sequences" )
     parser.add_argument("--file_txt",type = str, help = "dataset", default = "/scratch/dataset/vimeo_triplet/tri_trainlist.txt")
     parser.add_argument("--test_pt", type = str, help = "test dataset", default = "/scratch/dataset/kodak")
+    parser.add_argument("--save-dir", type = str, help = "Save directory", default = "/scratch/GBIC_res/exp")
 
     parser.add_argument("--conv", type = str, help = "graph conv type: [mr | edge | sage | gin | mrgat]", default = "mr")
     parser.add_argument('--use-graph-encoder', action='store_true', help="use graph encoder")
