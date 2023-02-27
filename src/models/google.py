@@ -47,10 +47,10 @@ class GBIC_FactorizedPrior(CompressionModel):
             #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=8),
             conv(N, N),
             GDN(N),
-            conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=4),
+            #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=4),
             #conv(N, N),
             GDN(N),
-            conv(N, M,use_graph=use_graph_encoder,conv=conv_type, ratio=1),
+            conv(N, M,use_graph=use_graph_encoder,conv=conv_type, ratio=2),
             #conv(M, M,use_graph=use_graph_encoder,conv=conv_type, reduce_graph=False, ratio=1)
         )
 
