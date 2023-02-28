@@ -13,3 +13,12 @@ def flat_nodes(x,shape):
   x = x.transpose(1,2)# .contiguous()
   x = x.reshape((B*H*W,C))# .contiguous()
   return x
+
+
+def unflat_nodes(x,shape):
+  B,C,W,H = shape
+
+  x = x.reshape((B,H*W,C))
+  x = x.transpose(1,2)
+  x = x.reshape((-1,C,H,W))
+  return x

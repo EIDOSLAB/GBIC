@@ -11,9 +11,12 @@ import torch.nn.functional as F
 from torch_geometric.typing import OptPairTensor
 from .pyg_utils import *
 from torch_geometric.nn.conv import SAGEConv
+from torch_geometric.nn import knn, knn_graph
 
 import sys
 from torch import Tensor
+
+
 class MRConv2d(nn.Module):
     """
     Max-Relative Graph Convolution (Paper: https://arxiv.org/abs/1904.03751) for dense data type
@@ -182,6 +185,8 @@ class DyGraphConv2d(GraphConv2d):
         x = x.reshape(B, C, -1, 1).contiguous() # torch.Size([16, 3, 25, 1])
         edge_index = self.dilated_knn_graph(x, y, relative_pos) # torch.Size([2, 16, 25, 9])
         x = super(DyGraphConv2d, self).forward(x, edge_index, y)
+        print(x.shape)
+        sys.exit(1)
         return x.reshape(B, -1, H, W).contiguous()
     
 
@@ -209,9 +214,9 @@ class PyGraphConv2d(nn.Module):
             y = F.avg_pool2d(x, self.r, self.r)
             _, _, Hy, Wy = y.shape
 
-            y = y.reshape(B, C, -1, 1)#.contiguous()  
+            y = y.reshape(B, C, -1, 1).contiguous()  
             
-        x = x.reshape(B, C, -1, 1)#.contiguous() # torch.Size([16, 3, 25, 1])
+        x = x.reshape(B, C, -1, 1).contiguous() # torch.Size([16, 3, 25, 1])
         edge_index = self.dilated_knn_graph(x, y, relative_pos) # torch.Size([2, 16, 25, 9])
         
         # Converting into PyG
@@ -237,8 +242,67 @@ class PyGraphConv2d(nn.Module):
             nodes : OptPairTensor = (y_f,x_f)
         
         out = self.conv(nodes, new_edge_index)
-        print(out.shape)
-        sys.exit(1)
+        return out
+
+
+class PyGraph(nn.Module):
+    """
+    Pytorch Geometric - Dynamic graph convolution layer
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='edge',heads =1, act='relu',
+                 norm=None, bias=True, stochastic=False, epsilon=0.0, r=1):
+        super(PyGraph, self).__init__()
+        self.in_channels = in_channels
+        self.k = kernel_size
+        self.d = dilation
+        self.r = r # reduce ratio 1 for vig
+        self.conv = SAGEConv( (in_channels,in_channels) ,out_channels, aggr='max', normalize=True, project=True,  flow='source_to_target')
+
+    def forward(self, x, relative_pos=None):
+        #print('\nStarting Grapher')
+        #print(x.shape)
+        #print(self.r)
+        B, C, H, W = x.shape # torch.Size([16, 3, 5, 5])
+        Hy, Wy = H, W
+        y = None
+        if self.r > 1:
+            y = F.avg_pool2d(x, self.r, self.r)
+            _, _, Hy, Wy = y.shape
+            #print(y.shape)
+
+            y = y.reshape(B, C, -1, 1).contiguous()  
+            y_f = flat_nodes(y, (B, C, Hy, Wy))
+            batches_y = torch.linspace(0,B,steps=(B*Hy*Wy),dtype=torch.int64).to(device=y.device)
+            
+        x = x.reshape(B, C, -1, 1).contiguous() # torch.Size([16, 3, 25, 1])
+        x_f = flat_nodes(x, (B, C, H, W))
+        batches_x = torch.linspace(0,B,steps=(B*H*W),dtype=torch.int64).to(device=x.device)
+
+        if self.r > 1:
+
+            assign_index = knn(y_f, x_f, self.k, batches_y, batches_x)
+            assign_index = torch.flip(assign_index, [0,1])
+            nodes : OptPairTensor = (y_f,x_f)
+        else:
+            assign_index = knn_graph(x_f, self.k, batches_x, loop=True)
+            nodes : OptPairTensor = (x_f,x_f)
+        
+        #print(x_f.shape)
+        #if(self.r > 1):
+            #print(y_f.shape)
+        #print(assign_index.t()[:9])
+        #print(torch.max(assign_index[0]))
+        #print(torch.min(assign_index[0]))
+        #print()
+        #print(torch.max(assign_index[1]))
+        #print(torch.min(assign_index[1]))
+        out = self.conv(nodes, assign_index)
+        #print(out.shape)
+
+        #print('Ending grapher \n')
+        
+        return out
+
 
 class Grapher(nn.Module):
     """
@@ -254,7 +318,11 @@ class Grapher(nn.Module):
             nn.Conv2d(in_channels, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
         ) """
-        self.graph_conv = PyGraphConv2d(in_channels, in_channels, knn, dilation, conv,heads,
+        
+        #PyGraphConv2d
+        #DyGraphConv2d
+        #PyGraph
+        self.graph_conv = PyGraph(in_channels, in_channels, knn, dilation, conv,heads,
                               act, norm, bias, stochastic, epsilon, r)
         """ self.fc2 = nn.Sequential(
             nn.Conv2d(in_channels * 2, in_channels, 1, stride=1, padding=0),
@@ -283,6 +351,10 @@ class Grapher(nn.Module):
         B, C, H, W = x.shape
         relative_pos = self._get_relative_pos(self.relative_pos, H, W)
         x = self.graph_conv(x,relative_pos)
+        x = unflat_nodes(x, (B,C,H,W))
+        #print(x.shape)
+        
+        #print('end Gnn layer')
         # x = self.fc2(x)
         return x
             

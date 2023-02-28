@@ -5,6 +5,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import sys
+
 #from compressai.ans import BufferedRansEncoder, RansDecoder
 from compressai.entropy_models import EntropyBottleneck   #, GaussianConditional
 from compressai.layers import GDN  #, MaskedConv2d
@@ -47,10 +49,10 @@ class GBIC_FactorizedPrior(CompressionModel):
             #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=8),
             conv(N, N),
             GDN(N),
-            #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=4),
+            conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=4),
             #conv(N, N),
             GDN(N),
-            conv(N, M,use_graph=use_graph_encoder,conv=conv_type, ratio=2),
+            conv(N, M,use_graph=use_graph_encoder,conv=conv_type, ratio=1),
             #conv(M, M,use_graph=use_graph_encoder,conv=conv_type, reduce_graph=False, ratio=1)
         )
 
