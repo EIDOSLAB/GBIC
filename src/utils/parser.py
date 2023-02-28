@@ -28,9 +28,12 @@ def parse_args(argv):
     parser.add_argument("--test_pt", type = str, help = "test dataset", default = "/scratch/dataset/kodak")
     parser.add_argument("--save-dir", type = str, help = "Save directory", default = "/scratch/GBIC_res/exp")
 
-    parser.add_argument("--conv", type = str, help = "graph conv type: [mr | edge | sage | gin | mrgat]", default = "mr")
+    parser.add_argument("--conv", type = str, help = "graph conv type: [mr | edge | sage | gin | mrgat]", default = "sage")
     parser.add_argument('--use-graph-encoder', action='store_true', help="use graph encoder")
     parser.add_argument('--use-graph-decoder', action='store_true', help="use graph decoder")
+    parser.add_argument('--bipartite', action='store_true', help="use bipartite graph")
+    parser.add_argument("--cheb-k", type=int, default=2, help="Chebyshev filter size (default: %(default)s)")
+
 
     args = parser.parse_args(argv)
     return args

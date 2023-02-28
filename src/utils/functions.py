@@ -10,7 +10,10 @@ def conv(
         in_channels, 
         out_channels,
         use_graph=False,
+        bipartite = True,
         conv='mr', # graph stuff
+        cheb_k = 2,
+        loop = True,
         ratio=1, # graph stuff
         reduce_graph=True,
         kernel_size=5, # conv2d stuff
@@ -23,15 +26,15 @@ def conv(
                     in_channels=in_channels,
                     knn=9, 
                     dilation=1,
+                    bipartite=bipartite,
                     conv=conv,
                     heads=1,
                     act=None,
                     norm=None,
                     bias=True,
-                    stochastic=False,
-                    epsilon=0.0,
                     r=ratio,
-                    relative_pos=False),
+                    cheb_k=cheb_k,
+                    loop=loop),
                 #FFN(
                 #    in_features=in_channels,
                 #    hidden_features=in_channels*4,

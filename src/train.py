@@ -99,7 +99,9 @@ def main(argv):
             M = args.M,
             use_graph_encoder = args.use_graph_encoder, 
             use_graph_decoder = args.use_graph_decoder, 
-            conv_type=args.conv)
+            conv_type=args.conv,
+            bipartite = args.bipartite,
+            cheb_k = args.cheb_k)
     else:
         net = image_models[args.model](quality = args.quality)
 
