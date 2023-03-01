@@ -15,6 +15,7 @@ def conv(
         cheb_k = 2,
         loop = True,
         ratio=1, # graph stuff
+        graph_norm=False,
         reduce_graph=True,
         kernel_size=5, # conv2d stuff
         stride=2): # conv2d stuff
@@ -30,7 +31,7 @@ def conv(
                     conv=conv,
                     heads=1,
                     act=None,
-                    norm=None,
+                    norm=graph_norm,
                     bias=True,
                     r=ratio,
                     cheb_k=cheb_k,

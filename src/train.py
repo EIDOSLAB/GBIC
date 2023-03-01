@@ -101,7 +101,8 @@ def main(argv):
             use_graph_decoder = args.use_graph_decoder, 
             conv_type=args.conv,
             bipartite = args.bipartite,
-            cheb_k = args.cheb_k)
+            cheb_k = args.cheb_k,
+            graph_norm = args.graph_norm)
     else:
         net = image_models[args.model](quality = args.quality)
 

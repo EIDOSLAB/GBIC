@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from torch_geometric.typing import OptPairTensor
 from .pyg_utils import *
 from torch_geometric.nn.conv import SAGEConv, ChebConv
+from torch_geometric.nn.norm import GraphNorm
 from torch_geometric.nn import knn, knn_graph
 
 import sys
@@ -195,8 +196,7 @@ class PyGraphBipartite(nn.Module):
     """
     Pytorch Geometric - KNN w/ pytorch geometric utils for bi-partite graph
     """
-    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='sage',heads =1, act='relu',
-                 norm=None, bias=True, r=1, loop = True):
+    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='sage',heads =1, bias=True, r=1, loop = True):
         super(PyGraphBipartite, self).__init__()
         self.in_channels = in_channels
         self.k = kernel_size
@@ -254,7 +254,7 @@ class PyGraph(nn.Module):
     """
     Pytorch Geometric - KNN w/ pytorch geometric utils
     """
-    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='cheb',heads =1, act='relu',
+    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='cheb',heads =1,
                  norm='sym', bias=True, cheb_k = 2, loop = True):
         super(PyGraph, self).__init__()
         self.in_channels = in_channels
@@ -301,10 +301,11 @@ class Grapher(nn.Module):
     """
     Grapher module with graph convolution and fc layers
     """
-    def __init__(self, in_channels, knn=9, dilation=1,bipartite = True, conv='edge',heads = 1, act='relu', norm=None,
+    def __init__(self, in_channels, knn=9, dilation=1,bipartite = True, conv='edge',heads = 1, act='relu', norm=True,
                  bias=True, r=1, cheb_k = 2, loop = True):
         super(Grapher, self).__init__()
         self.channels = in_channels # node's features
+        self.norm = norm
         self.r = r # reduce ratio: [4, 2, 1, 1] ; vig: 1 (does not reduce)
         """ self.fc1 = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 1, stride=1, padding=0),
@@ -313,10 +314,12 @@ class Grapher(nn.Module):
         
         if(bipartite):
             self.graph_conv = PyGraphBipartite(in_channels, in_channels, knn, dilation, conv,heads,
-                              act, norm, bias, r)
+                              bias, r)
         else:
             self.graph_conv = PyGraph(in_channels, in_channels, knn, dilation, conv,heads,
-                              act, norm, bias, cheb_k = cheb_k, loop = loop)
+                              'sym', bias, cheb_k = cheb_k, loop = loop)
+        
+        self.norm_layer = GraphNorm(in_channels)
         """ self.fc2 = nn.Sequential(
             nn.Conv2d(in_channels * 2, in_channels, 1, stride=1, padding=0),
             nn.BatchNorm2d(in_channels),
@@ -327,6 +330,8 @@ class Grapher(nn.Module):
         # x = self.fc1(x)
         B, C, H, W = x.shape
         x = self.graph_conv(x)
+        if(self.norm):
+            x = self.norm_layer(x)
         x = unflat_nodes(x, (B,C,H,W))
         #print(x.shape)
         

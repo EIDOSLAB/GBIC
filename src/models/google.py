@@ -38,7 +38,7 @@ class GBIC_FactorizedPrior(CompressionModel):
     r"""ADD GRAPH MODULES
     """
 
-    def __init__(self, N, M,use_graph_encoder = False,use_graph_decoder = False, conv_type='mr',bipartite = True, cheb_k = 2,  **kwargs):
+    def __init__(self, N, M,use_graph_encoder = False,use_graph_decoder = False, conv_type='mr',bipartite = True, cheb_k = 2, graph_norm = False,  **kwargs):
         super().__init__(**kwargs)
 
         self.entropy_bottleneck = EntropyBottleneck(M)
@@ -49,10 +49,10 @@ class GBIC_FactorizedPrior(CompressionModel):
             #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=1, cheb_k=2),
             conv(N, N),
             GDN(N),
-            conv(N, N,use_graph=use_graph_encoder,bipartite=bipartite, conv=conv_type,cheb_k=cheb_k, ratio=1),
+            conv(N, N,use_graph=use_graph_encoder,bipartite=bipartite, conv=conv_type,cheb_k=cheb_k, ratio=4, graph_norm=graph_norm),
             #conv(N, N),
             GDN(N),
-            conv(N, M,use_graph=use_graph_encoder,bipartite=bipartite, conv=conv_type,cheb_k=cheb_k, ratio=1),
+            conv(N, M,use_graph=use_graph_encoder,bipartite=bipartite, conv=conv_type,cheb_k=cheb_k, ratio=1, graph_norm=graph_norm),
             #conv(M, M,use_graph=use_graph_encoder,conv=conv_type, reduce_graph=False, ratio=1)
         )
 
