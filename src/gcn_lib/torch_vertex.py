@@ -14,6 +14,8 @@ from torch_geometric.nn.conv import SAGEConv, ChebConv
 from torch_geometric.nn.norm import GraphNorm
 from torch_geometric.nn import knn, knn_graph
 
+import torch_geometric.nn as nn_pyg
+
 import sys
 from torch import Tensor
 
@@ -196,16 +198,49 @@ class PyGraphBipartite(nn.Module):
     """
     Pytorch Geometric - KNN w/ pytorch geometric utils for bi-partite graph
     """
-    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='sage',heads =1, bias=True, r=1, loop = True):
+    def __init__(self,
+                in_channels,
+                out_channels,
+                kernel_size=9,
+                conv='sage',
+                heads =1,
+                bias=True,
+                r=1,
+                loop = True,
+                aggr = 'mean',
+                slope = 0.01):
         super(PyGraphBipartite, self).__init__()
-        self.in_channels = in_channels
         self.k = kernel_size
         self.loop = loop
-        self.r = r # reduce ratio 1 for vig
-        if(conv == 'sage'):
-            self.conv = SAGEConv( (in_channels,in_channels), out_channels, aggr='max', normalize=True, project=True,  flow='source_to_target')
+        self.r = r 
+        self.conv_name = conv
+
+        if(conv == 'gat'):
+            conv_layer =nn_pyg.GATv2Conv((in_channels,in_channels),out_channels,heads=heads,bias=bias, flow='source_to_target')
+        elif(conv == 'sage'):
+            conv_layer = nn_pyg.SAGEConv((in_channels,in_channels),out_channels, aggr=aggr, bias=bias, flow='source_to_target')
+        elif(conv == 'gconv'):
+            conv_layer = nn_pyg.GraphConv((in_channels,in_channels),out_channels, aggr=aggr, bias=bias, flow='source_to_target')
+        elif(conv == 'edge'):
+            conv_layer = nn_pyg.EdgeConv(
+                nn=nn.Sequential(
+                    nn.Linear(2*in_channels, out_channels),
+                    nn.LeakyReLU(slope),
+                    nn.Linear(out_channels,out_channels)
+                ),
+                aggr=aggr,
+                flow='source_to_target'
+            )
+        elif(conv == 'transformer'):
+            conv_layer =  nn_pyg.TransformerConv((in_channels,in_channels),out_channels,heads=heads,bias=bias, flow='source_to_target')
+                
         else:
             raise NotImplementedError('conv:{} is not supported by PyGraphBipartite class'.format(conv))
+        
+        self.conv_layer = conv_layer
+
+        self.linear_heads = nn.Linear(out_channels*heads, out_channels)
+        
 
     def forward(self, x):
         #print('\nStarting Grapher')
@@ -226,7 +261,6 @@ class PyGraphBipartite(nn.Module):
         batches_x = torch.linspace(0,B,steps=(B*H*W),dtype=torch.int64).to(device=x.device)
 
         if self.r > 1:
-
             assign_index = knn(y_f, x_f, self.k, batches_y, batches_x)
             assign_index = torch.flip(assign_index, [0,1])
             nodes : OptPairTensor = (y_f,x_f)
@@ -235,7 +269,7 @@ class PyGraphBipartite(nn.Module):
             nodes : OptPairTensor = (x_f,x_f)
         
         #print(x_f.shape)
-        #if(self.r > 1):stochastic=False, epsilon=0.0, 
+        #if(self.r > 1):
             #print(y_f.shape)
         #print(assign_index.t()[:9])
         #print(torch.max(assign_index[0]))
@@ -243,10 +277,13 @@ class PyGraphBipartite(nn.Module):
         #print()
         #print(torch.max(assign_index[1]))
         #print(torch.min(assign_index[1]))
-        out = self.conv(nodes, assign_index)
+        out = self.conv_layer(nodes, assign_index)
         #print(out.shape)
 
         #print('Ending grapher \n')
+
+        if(self.conv_name in ['gat', 'transformer']):
+            out = self.linear_heads(out)
         
         return out
 
@@ -254,16 +291,34 @@ class PyGraph(nn.Module):
     """
     Pytorch Geometric - KNN w/ pytorch geometric utils
     """
-    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='cheb',heads =1,
-                 norm='sym', bias=True, cheb_k = 2, loop = True):
+    def __init__(self, 
+                 in_channels, 
+                 out_channels, 
+                 kernel_size=9, 
+                 conv='cheb',
+                 bias=True, 
+                 cheb_k = 2, 
+                 loop = True):
+        
         super(PyGraph, self).__init__()
-        self.in_channels = in_channels
         self.k = kernel_size
         self.loop = loop
+        self.conv_name = conv
+
         if(conv == 'cheb'):
-            self.conv = ChebConv( in_channels, out_channels,K=cheb_k,normalization=norm, bias=bias, flow='source_to_target')
+            conv_layer = nn_pyg.ChebConv(in_channels, 
+                                         out_channels,
+                                         K=cheb_k,
+                                         normalization='sym', 
+                                         bias=bias, 
+                                         flow='source_to_target')
+        
+        elif(conv == 'gcn'):
+            conv_layer = nn_pyg.GCNConv(in_channels, out_channels, flow='source_to_target')
         else:
             raise NotImplementedError('conv:{} is not supported by PyGraph class'.format(conv))
+        
+        self.conv_layer = conv_layer
 
     def forward(self, x):
         #print('\nStarting Grapher')
@@ -286,10 +341,16 @@ class PyGraph(nn.Module):
         #print()
         #print(torch.max(assign_index[1]))
         #print(torch.min(assign_index[1]))
-        out = self.conv(
-            x=x_f,
-            edge_index = assign_index,
-            batch = batches_x)
+
+        if(self.conv_name == 'gcn'):
+            out = self.conv_layer(
+                x=x_f,
+                edge_index = assign_index)
+        else:
+            out = self.conv_layer(
+                x=x_f,
+                edge_index = assign_index,
+                batch = batches_x)
         #print(out.shape)
 
         #print('Ending grapher \n')
@@ -297,46 +358,164 @@ class PyGraph(nn.Module):
         return out
 
 
+class TorchGraph(nn.Module):
+    """
+    Pytorch Geometric - KNN w/ pointcloud utils
+    """
+    def __init__(self, in_channels, out_channels, kernel_size=9, conv='cheb',heads =1,
+                 norm='sym', bias=True, cheb_k = 2, loop = True):
+        super(TorchGraph, self).__init__()
+        self.in_channels = in_channels
+        self.k = kernel_size
+        self.loop = loop
+        self.dilated_knn_graph = DenseDilatedKnnGraph(self.k)
+        if(conv == 'cheb'):
+            self.conv = ChebConv(in_channels, out_channels,K=cheb_k,normalization=norm, bias=bias, flow='source_to_target')
+        else:
+            raise NotImplementedError('conv:{} is not supported by TorchGraph class'.format(conv))
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        x_f = x.reshape(B,C,-1,1)
+        edge_index = self.dilated_knn_graph(x_f,None,None)
+
+        x_j = edge_index[0]
+        x_i = edge_index[1]
+
+    
+
+        count_batches = torch.linspace(0,B,steps=(9*H*W*B),dtype=torch.int64).to(device=x.device)
+
+        xx_j = x_j.reshape(-1) + ( count_batches  * (H*W))
+        xx_i = x_i.reshape(-1) + ( count_batches  * (H*W))
+        new_edge_index = torch.cat([xx_j.unsqueeze(0),xx_i.unsqueeze(0)], dim = 0)
+
+        print(torch.max(new_edge_index[0]), torch.max(new_edge_index[1]))
+        print(torch.min(new_edge_index[0]), torch.min(new_edge_index[1]))
+        print()
+
+        x_f = flat_nodes(x, x.shape)
+
+
+        out = self.conv(
+            x=x_f,
+            edge_index = new_edge_index)
+        
+        return out
+
+
+
+
 class Grapher(nn.Module):
     """
     Grapher module with graph convolution and fc layers
     """
-    def __init__(self, in_channels, knn=9, dilation=1,bipartite = True, conv='edge',heads = 1, act='relu', norm=True,
-                 bias=True, r=1, cheb_k = 2, loop = True):
+    def __init__(self, 
+                 in_channels, 
+                 knn=9, 
+                 bipartite = True, 
+                 conv='edge',
+                 heads = 1, 
+                 act='relu', 
+                 slope = 0.2,
+                 aggr='mean',
+                 norm='none',
+                 bias=True, 
+                 r=1, 
+                 cheb_k = 2, 
+                 loop = True,
+                 use_fc = False):
+        
         super(Grapher, self).__init__()
         self.channels = in_channels # node's features
         self.norm = norm
-        self.r = r # reduce ratio: [4, 2, 1, 1] ; vig: 1 (does not reduce)
-        """ self.fc1 = nn.Sequential(
+        self.r = r 
+        self.use_fc = use_fc
+
+        out_channels = in_channels
+        if(use_fc):
+            out_channels = in_channels * 2
+
+
+        self.fc1 = nn.Sequential(
             nn.Conv2d(in_channels, in_channels, 1, stride=1, padding=0),
-            nn.BatchNorm2d(in_channels),
-        ) """
+            nn.BatchNorm2d(in_channels)
+        ) 
         
         if(bipartite):
-            self.graph_conv = PyGraphBipartite(in_channels, in_channels, knn, dilation, conv,heads,
-                              bias, r)
+            self.graph_conv = PyGraphBipartite(
+                                in_channels,
+                                out_channels,
+                                knn,
+                                conv,
+                                heads,
+                                bias,
+                                r,
+                                loop=loop,
+                                aggr=aggr)
         else:
-            self.graph_conv = PyGraph(in_channels, in_channels, knn, dilation, conv,heads,
-                              'sym', bias, cheb_k = cheb_k, loop = loop)
+            self.graph_conv = PyGraph(
+                                in_channels, 
+                                out_channels, 
+                                knn, 
+                                conv, 
+                                bias, 
+                                cheb_k = cheb_k, 
+                                loop = loop)
         
-        self.norm_layer = GraphNorm(in_channels)
-        """ self.fc2 = nn.Sequential(
+        # graph conv norm layer
+        norm_layer = None
+        if(norm == 'batch'):
+            norm_layer = nn_pyg.BatchNorm(out_channels)
+        elif(norm == 'instance'):
+            norm_layer = nn_pyg.InstanceNorm(out_channels)
+        elif(norm == 'layer'):
+            norm_layer = nn_pyg.LayerNorm(out_channels)
+        elif(norm == 'graph'):
+            norm_layer = nn_pyg.GraphNorm(out_channels)
+        else:
+            norm_layer = nn.Identity()
+
+        self.norm_layer = norm_layer
+
+        self.activation_layer = None
+
+        if(act == 'relu'):
+            self.activation_layer = nn.ReLU()
+        elif(act == 'leakyrelu'):
+            self.activation_layer = nn.LeakyReLU(slope)
+        elif(act == 'gelu'):
+            self.activation_layer = nn.GELU()
+        else:
+            self.activation_layer = nn.Identity()
+
+        
+
+        self.fc2 = nn.Sequential(
             nn.Conv2d(in_channels * 2, in_channels, 1, stride=1, padding=0),
-            nn.BatchNorm2d(in_channels),
-        ) """
-        self.relative_pos = None
+            nn.BatchNorm2d(in_channels)
+        ) 
+
         
     def forward(self, x):
-        # x = self.fc1(x)
+        if(self.use_fc):
+            x = self.fc1(x)
+
         B, C, H, W = x.shape
         x = self.graph_conv(x)
-        if(self.norm):
-            x = self.norm_layer(x)
+        x = self.norm_layer(x)
+        x = self.activation_layer(x)
+
+        if(self.use_fc):
+            C = C*2
+
         x = unflat_nodes(x, (B,C,H,W))
+
         #print(x.shape)
-        
         #print('end Gnn layer')
-        # x = self.fc2(x)
+
+        if(self.use_fc):
+            x = self.fc2(x)
         return x
             
 
@@ -349,7 +528,10 @@ class FFN(nn.Module):
             nn.Conv2d(in_features, hidden_features, 1, stride=1, padding=0),
             nn.BatchNorm2d(hidden_features),
         )
-        #self.act = act_layer(act)
+
+        self.act = nn.Identity()
+        if(act != 'none'):
+            self.act = act_layer(act)
         self.fc2 = nn.Sequential(
             nn.Conv2d(hidden_features, out_features, 1, stride=1, padding=0),
             nn.BatchNorm2d(out_features),
@@ -357,7 +539,7 @@ class FFN(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
-        #x = self.act(x)
+        x = self.act(x)
         x = self.fc2(x)
         return x
 
@@ -369,7 +551,7 @@ class Downsample(nn.Module):
         super().__init__()        
         self.conv = nn.Sequential(
             nn.Conv2d(in_dim, out_dim, 3, stride=2, padding=1),
-            #nn.BatchNorm2d(out_dim),
+            nn.BatchNorm2d(out_dim),
         )
 
 
@@ -388,7 +570,8 @@ class Upsample(nn.Module):
                 stride=2,
                 output_padding=2 - 1,
                 padding=1,
-            )
+            ),
+            nn.BatchNorm2d(out_dim),
         )
 
     def forward(self, x):
@@ -396,67 +579,3 @@ class Upsample(nn.Module):
         return x
     
 
-
-
-
-
-
-
-
-
-
-# ingore
-
-
-
-class PyGraphConv2d(nn.Module):
-    """
-    Pytorch Geometric - KNN w/ pytorch and convertion
-    """
-    def __init__(self, in_channels, out_channels, kernel_size=9, dilation=1, conv='edge',heads =1, act='relu',
-                 norm=None, bias=True, stochastic=False, epsilon=0.0, r=1):
-        super(PyGraphConv2d, self).__init__()
-        self.in_channels = in_channels
-        self.k = kernel_size
-        self.d = dilation
-        self.r = r # reduce ratio 1 for vig
-        self.dilated_knn_graph = DenseDilatedKnnGraph(kernel_size, dilation, stochastic, epsilon)
-        self.conv = SAGEConv( (in_channels,in_channels) ,out_channels, aggr='max', normalize=True, project=True)
-
-    def forward(self, x, relative_pos=None):
-        B, C, H, W = x.shape # torch.Size([16, 3, 5, 5])
-        Hy, Wy = H, W
-        y = None
-        if self.r > 1:
-            y = F.avg_pool2d(x, self.r, self.r)
-            _, _, Hy, Wy = y.shape
-
-            y = y.reshape(B, C, -1, 1).contiguous()  
-            
-        x = x.reshape(B, C, -1, 1).contiguous() # torch.Size([16, 3, 25, 1])
-        edge_index = self.dilated_knn_graph(x, y, relative_pos) # torch.Size([2, 16, 25, 9])
-        
-        # Converting into PyG
-
-        x_j = edge_index[0]
-        x_i = edge_index[1]
-
-        count_batches = torch.linspace(0,B,steps=(9*H*W*B),dtype=torch.int64).to(device=x.device)
-
-        xx_j = x_j.reshape(-1) + ( count_batches  * (Hy*Wy))
-        xx_i = x_i.reshape(-1) + ( count_batches  * (H*W))
-        new_edge_index = torch.cat([xx_i.unsqueeze(0),xx_j.unsqueeze(0)], dim = 0)
-
-        x_f = flat_nodes(x, (B, C, H, W))
-        
-        nodes : OptPairTensor = (x_f,x_f)
-
-        if(self.r > 1):
-            y_f = flat_nodes(y, (B, C, Hy, Wy))
-            #print(x_f.shape)
-            #print(y_f.shape)
-            #print(self.in_channels)
-            nodes : OptPairTensor = (y_f,x_f)
-        
-        out = self.conv(nodes, new_edge_index)
-        return out

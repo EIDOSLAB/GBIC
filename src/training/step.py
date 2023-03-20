@@ -85,7 +85,7 @@ def train_one_epoch(model, criterion, train_dataloader, optimizer, aux_optimizer
     
 
 
-def test_one_epoch(epoch, test_dataloader, model, criterion):
+def test_one_epoch(epoch, test_dataloader, model, criterion, tag='test'):
     model.eval()
     device = next(model.parameters()).device
 
@@ -114,7 +114,7 @@ def test_one_epoch(epoch, test_dataloader, model, criterion):
 
 
     print(
-        f"Test epoch {epoch}: Average losses:"
+        f"{tag} epoch {epoch}: Average losses:"
         f"\tLoss: {loss.avg:.3f} |"
         f"\tMSE loss: {mse_loss.avg:.3f} |"
         f"\tBpp loss: {bpp_loss.avg:.2f} |"
@@ -122,12 +122,12 @@ def test_one_epoch(epoch, test_dataloader, model, criterion):
     )
 
     log_dict = {
-    "test":epoch,
-    "test/loss": loss.avg,
-    "test/bpp":bpp_loss.avg,
-    "test/mse": mse_loss.avg, 
-    "test/psnr":psnr.avg,
-    "test/ssim":ssim.avg,
+    f"{tag}":epoch,
+    f"{tag}/loss": loss.avg,
+    f"{tag}/bpp":bpp_loss.avg,
+    f"{tag}/mse": mse_loss.avg, 
+    f"{tag}/psnr":psnr.avg,
+    f"{tag}/ssim":ssim.avg,
     }
     wandb.log(log_dict)
     return loss.avg

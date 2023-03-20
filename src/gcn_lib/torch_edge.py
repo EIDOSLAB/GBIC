@@ -63,7 +63,7 @@ def dense_knn_matrix(x, k=16, relative_pos=None):
         x = x.transpose(2, 1).squeeze(-1)
         batch_size, n_points, n_dims = x.shape
         ### memory efficient implementation ###
-        n_part = 10000
+        n_part = 16384
         if n_points > n_part:
             nn_idx_list = []
             groups = math.ceil(n_points / n_part)
@@ -77,7 +77,7 @@ def dense_knn_matrix(x, k=16, relative_pos=None):
                 nn_idx_list += [nn_idx_part]
             nn_idx = torch.cat(nn_idx_list, dim=1)
         else:
-            dist = pairwise_distance(x.detach()) # dist: (batch_size, num_points, num_points)
+            dist = pairwise_distance(x)#.detach()) # dist: (batch_size, num_points, num_points)
             if relative_pos is not None:
                 dist += relative_pos
             _, nn_idx = torch.topk(-dist, k=k) # b, n, k
@@ -158,4 +158,5 @@ class DenseDilatedKnnGraph(nn.Module):
             x = F.normalize(x, p=2.0, dim=1)
             ####
             edge_index = dense_knn_matrix(x, self.k * self.dilation, relative_pos)
-        return self._dilated(edge_index)
+        #return self._dilated(edge_index)
+        return edge_index

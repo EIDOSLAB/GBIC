@@ -38,32 +38,143 @@ class GBIC_FactorizedPrior(CompressionModel):
     r"""ADD GRAPH MODULES
     """
 
-    def __init__(self, N, M,use_graph_encoder = False,use_graph_decoder = False, conv_type='mr',bipartite = True, cheb_k = 2, graph_norm = False,  **kwargs):
+    def __init__(self, 
+                 N, 
+                 M,
+                 n_graph_encoder = 2,
+                 symmetric = False,
+                 
+                 conv_type='sage',
+                 bipartite = True,
+                 cheb_k = 2,
+                 heads = 1,
+                 activation = 'none',
+                 aggr = 'mean',
+                 knn = 9,
+                 loop = True,
+                 use_ffn =False,
+                 use_fc = False,
+                 graph_norm = 'none',
+                 **kwargs):
+        
         super().__init__(**kwargs)
 
         self.entropy_bottleneck = EntropyBottleneck(M)
 
+        use_graph_encoder = [*([False]*(3-n_graph_encoder)), *([True]*n_graph_encoder)]
+        use_graph_decoder = [False,False,False]
+
+        if(symmetric and n_graph_encoder<3):
+            use_graph_decoder = [*([True]*n_graph_encoder),*([False]*(3-n_graph_encoder))]
+
         self.g_a = nn.Sequential(
             conv(3, N, use_graph=False),
             GDN(N),
-            #conv(N, N,use_graph=use_graph_encoder,conv=conv_type, ratio=1, cheb_k=2),
-            conv(N, N),
+
+            conv(N, 
+                 N,
+                 use_graph=use_graph_encoder[0],
+                 bipartite=bipartite, 
+                 conv=conv_type,
+                 cheb_k=cheb_k, 
+                 heads=heads,
+                 activation=activation,
+                 aggr=aggr,
+                 k=knn,
+                 loop=loop,
+                 ratio=8, 
+                 norm=graph_norm,
+                 use_ffn=use_ffn,
+                 use_fc=use_fc),
             GDN(N),
-            conv(N, N,use_graph=use_graph_encoder,bipartite=bipartite, conv=conv_type,cheb_k=cheb_k, ratio=4, graph_norm=graph_norm),
-            #conv(N, N),
+
+            conv(N, 
+                 N,
+                 use_graph=use_graph_encoder[1],
+                 bipartite=bipartite, 
+                 conv=conv_type,
+                 cheb_k=cheb_k, 
+                 heads=heads,
+                 activation=activation,
+                 aggr=aggr,
+                 k=knn,
+                 loop=loop,
+                 ratio=4, 
+                 norm=graph_norm,
+                 use_ffn=use_ffn,
+                 use_fc=use_fc),
             GDN(N),
-            conv(N, M,use_graph=use_graph_encoder,bipartite=bipartite, conv=conv_type,cheb_k=cheb_k, ratio=1, graph_norm=graph_norm),
-            #conv(M, M,use_graph=use_graph_encoder,conv=conv_type, reduce_graph=False, ratio=1)
+
+            conv(N, 
+                 M,
+                 use_graph=use_graph_encoder[2],
+                 bipartite=bipartite, 
+                 conv=conv_type,
+                 cheb_k=cheb_k, 
+                 heads=heads,
+                 activation=activation,
+                 aggr=aggr,
+                 k=knn,
+                 loop=loop,
+                 ratio=1, 
+                 norm=graph_norm,
+                 use_ffn=use_ffn,
+                 use_fc=use_fc)
         )
 
         self.g_s = nn.Sequential(
-            deconv(M, N,use_graph=use_graph_decoder,conv=conv_type, ratio=1),
+            deconv(M, 
+                   N,
+                   use_graph=use_graph_decoder[0],
+                   bipartite=bipartite, 
+                   conv=conv_type,
+                   cheb_k=cheb_k, 
+                   heads=heads,
+                   activation=activation,
+                   aggr=aggr,
+                   k=knn,
+                   loop=loop,
+                   ratio=1, 
+                   norm=graph_norm,
+                   use_ffn=use_ffn,
+                   use_fc=use_fc),
             GDN(N, inverse=True),
-            deconv(N, N,use_graph=use_graph_decoder,conv=conv_type, ratio=4),
+
+            deconv(N, 
+                   N,
+                   use_graph=use_graph_decoder[1],
+                   bipartite=bipartite, 
+                   conv=conv_type,
+                   cheb_k=cheb_k, 
+                   heads=heads,
+                   activation=activation,
+                   aggr=aggr,
+                   k=knn,
+                   loop=loop,
+                   ratio=4, 
+                   norm=graph_norm,
+                   use_ffn=use_ffn,
+                   use_fc=use_fc),
             GDN(N, inverse=True),
-            deconv(N, N),
+
+            deconv(N, 
+                   N,
+                   use_graph=use_graph_decoder[2],
+                   bipartite=bipartite, 
+                   conv=conv_type,
+                   cheb_k=cheb_k, 
+                   heads=heads,
+                   activation=activation,
+                   aggr=aggr,
+                   k=knn,
+                   loop=loop,
+                   ratio=8, 
+                   norm=graph_norm,
+                   use_ffn=use_ffn,
+                   use_fc=use_fc),
             GDN(N, inverse=True),
-            deconv(N, 3),
+
+            deconv(N, 3)
         )
 
         self.N = N
@@ -146,24 +257,77 @@ if __name__ == '__main__':
         "bmshj2018-factorized": bmshj2018_factorized,
     }   
     device = "cuda" if  torch.cuda.is_available() else "cpu"
-
-    net = image_models['graph-factorized'](
-        N = 128, 
-        M =192,
-        use_graph_encoder = True,
-        use_graph_decoder = False, 
-        conv_type='mr')
-    
-    pytorch_total_params = sum(p.numel() for p in net.parameters())
-    print('Vanilla: total params: {:,}'.format(pytorch_total_params))
-
-    
-    net = net.to(device)
-
     x = torch.rand((8,3,256,256))
     x= x.to(device)
-    st = time.time()
-    out = net(x)
-    print(f'Time: {time.time()-st}')
-    outshape = out['x_hat'].shape
-    print(f'Output shape: {outshape}')
+
+    for N in [128]:
+        for n_graph_encoder in [3]:
+            for symmetric in [True,False]:
+                #'cheb_2','cheb_3','cheb_4','gcn','gat_1','gat_2',
+                for conv_layer_full in ['sage','gconv','edge','transformer_1','transformer_2','transformer_4']:
+                    for activation in ['none']:#,'relu','leakyrelu','gelu']:
+                        for aggr in ['mean']:#,'max']:
+                            for knn in [18]:
+                                for loop in [True]:#,False]:
+                                    for use_ffn in [True]:#,False]:
+                                        for use_fc in [True]:#,False]:
+                                            for graph_norm in ['graph']:#['none','batch','instance','layer','graph']:
+
+                                                print(n_graph_encoder,
+                                                symmetric,
+                                                conv_layer_full,
+                                                activation,
+                                                aggr,
+                                                knn,
+                                                loop,
+                                                use_ffn,
+                                                use_fc,
+                                                graph_norm)
+                                                
+                                                heads =1
+                                                cheb_k=1
+
+                                                if(conv_layer_full.startswith('gat')):
+                                                    conv_layer = conv_layer_full.split('_')[0]
+                                                    heads = int(conv_layer_full.split('_')[1])
+                                                elif(conv_layer_full.startswith('transformer')):
+                                                    conv_layer = conv_layer_full.split('_')[0]
+                                                    heads = int(conv_layer_full.split('_')[1])
+                                                elif(conv_layer_full.startswith('cheb')):
+                                                    conv_layer = conv_layer_full.split('_')[0]
+                                                    cheb_k = int(conv_layer_full.split('_')[1])
+                                                else:
+                                                    conv_layer = conv_layer_full
+                                                
+                                                bipartite = True
+                                                if(conv_layer in ['cheb', 'gcn']):
+                                                    bipartite = False
+
+                                                net = image_models['graph-factorized'](
+                                                    N = N, 
+                                                    M =192,
+                                                    n_graph_encoder = n_graph_encoder,
+                                                    symmetric = symmetric,
+                                                    conv_type = conv_layer,
+                                                    bipartite = bipartite,
+                                                    cheb_k = cheb_k,
+                                                    heads = heads,
+                                                    activation = activation,
+                                                    aggr = aggr,
+                                                    knn = knn,
+                                                    loop = loop,
+                                                    use_ffn = use_ffn,
+                                                    use_fc = use_fc,
+                                                    graph_norm = graph_norm
+                                                )
+                                                """ 
+                                                pytorch_total_params = sum(p.numel() for p in net.parameters())
+                                                print('Total params: {:,}'.format(pytorch_total_params)) """
+
+                                                
+                                                net = net.to(device)
+
+                                                out = net(x)
+                                                outshape = out['x_hat'].shape
+                                                print(f'Output shape: {outshape}')
+                                                print('----------\n')

@@ -11,57 +11,57 @@ def conv(
         out_channels,
         use_graph=False,
         bipartite = True,
-        conv='mr', # graph stuff
+        conv='sage', # graph stuff
         cheb_k = 2,
+        heads = 1,
+        activation='none',
+        aggr = 'mean',
+        k=9,
         loop = True,
         ratio=1, # graph stuff
-        graph_norm=False,
-        reduce_graph=True,
+        norm = 'none',
+        use_ffn = False,
+        use_fc = False,
         kernel_size=5, # conv2d stuff
         stride=2): # conv2d stuff
 
     if(use_graph):
-        if(reduce_graph):
-            return nn.Sequential(
-                Grapher(
-                    in_channels=in_channels,
-                    knn=9, 
-                    dilation=1,
-                    bipartite=bipartite,
-                    conv=conv,
-                    heads=1,
-                    act=None,
-                    norm=graph_norm,
-                    bias=True,
-                    r=ratio,
-                    cheb_k=cheb_k,
-                    loop=loop),
-                #FFN(
-                #    in_features=in_channels,
-                #    hidden_features=in_channels*4,
-                #    out_features=in_channels,
-                #    act=None
-                #),
-                Downsample(
-                    in_dim=in_channels,
-                    out_dim=out_channels
-                )
+        grapher = Grapher(
+                in_channels=in_channels,
+                knn=k,
+                bipartite=bipartite,
+                conv=conv,
+                heads=heads,
+                act=activation,
+                aggr = aggr,
+                norm=norm,
+                bias=True,
+                r=ratio,
+                cheb_k=cheb_k,
+                loop=loop,
+                use_fc=use_fc)
+        ffn = FFN(
+                in_features=in_channels,
+                hidden_features=in_channels*4,
+                out_features=in_channels,
+                act=activation
             )
-        return nn.Sequential(
-                Grapher(
-                    in_channels=in_channels,
-                    knn=9, 
-                    dilation=1,
-                    conv=conv,
-                    heads=1,
-                    act=None,
-                    norm=None,
-                    bias=True,
-                    stochastic=False,
-                    epsilon=0.0,
-                    r=ratio,
-                    relative_pos=False)
-        )
+        down = Downsample(
+                in_dim=in_channels,
+                out_dim=out_channels
+            )
+        
+        if(use_ffn):
+            return nn.Sequential(
+                grapher,
+                ffn,
+                down
+            )
+        else:
+            return nn.Sequential(
+                grapher,
+                down
+            )
     
     return nn.Conv2d(
         in_channels,
@@ -74,39 +74,62 @@ def conv(
 
 def deconv(
         in_channels, 
-        out_channels, 
+        out_channels,
         use_graph=False,
-        conv='mr', # graph stuff
+        bipartite = True,
+        conv='sage', # graph stuff
+        cheb_k = 2,
+        heads = 1,
+        activation='none',
+        aggr = 'mean',
+        k=9,
+        loop = True,
         ratio=1, # graph stuff
+        norm = 'none',
+        use_ffn = False,
+        use_fc = False,
         kernel_size=5, # conv2d stuff
         stride=2): # conv2d stuff
 
+        
     if(use_graph):
-        return nn.Sequential(
-            Grapher(
+        grapher = Grapher(
                 in_channels=in_channels,
-                knn=9, 
-                dilation=1,
+                knn=k,
+                bipartite=bipartite,
                 conv=conv,
-                heads=1,
-                act=None,
-                norm=None,
+                heads=heads,
+                act=activation,
+                aggr = aggr,
+                norm=norm,
                 bias=True,
-                stochastic=False,
-                epsilon=0.0,
                 r=ratio,
-                relative_pos=False),
-            #FFN(
-            #    in_features=in_channels,
-            #    hidden_features=in_channels*4,
-            #    out_features=in_channels,
-            #    act=None
-            #),
-            Upsample(
+                cheb_k=cheb_k,
+                loop=loop,
+                use_fc=use_fc)
+        ffn = FFN(
+                in_features=in_channels,
+                hidden_features=in_channels*4,
+                out_features=in_channels,
+                act=activation
+            )
+        up = Upsample(
                 in_dim=in_channels,
                 out_dim=out_channels
             )
-        )
+        
+        if(use_ffn):
+            return nn.Sequential(
+                grapher,
+                ffn,
+                up
+            )
+        else:
+            return nn.Sequential(
+                grapher,
+                up
+            )
+
 
     return nn.ConvTranspose2d(
         in_channels,
