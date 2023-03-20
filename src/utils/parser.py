@@ -27,13 +27,19 @@ def parse_args(argv):
     parser.add_argument("--file_txt",type = str, help = "dataset", default = "/scratch/dataset/vimeo_triplet/tri_trainlist.txt")
     parser.add_argument("--test_pt", type = str, help = "test dataset", default = "/scratch/dataset/kodak")
     parser.add_argument("--save-dir", type = str, help = "Save directory", default = "/scratch/GBIC_res/exp")
+    parser.add_argument("--project-name", type = str, help = "Save directory", default = "/scratch/GBIC_res/exp")
 
     parser.add_argument("--conv", type = str, help = "graph conv type: [sage | cheb]", default = "sage")
-    parser.add_argument('--use-graph-encoder', action='store_true', help="use graph encoder")
-    parser.add_argument('--use-graph-decoder', action='store_true', help="use graph decoder")
+    parser.add_argument("--aggr", type = str, default = "mean")
+    parser.add_argument("--graph-norm", type = str, default = "none")
+    parser.add_argument("--activation", type = str, default = "none")
+    parser.add_argument('--loop', action='store_true')
+    parser.add_argument('--use-ffn', action='store_true')
+    parser.add_argument('--use-fc', action='store_true')
+    parser.add_argument("--knn", type=int, default=9)
+    parser.add_argument("--n-graph-encoder", type=int, default=2)
+    parser.add_argument('--symmetric', action='store_true', help="use graph encoder")
     parser.add_argument('--bipartite', action='store_true', help="use bipartite graph")
-    parser.add_argument('--graph-norm', action='store_true', help="use graph normalization")
-    parser.add_argument("--cheb-k", type=int, default=2, help="Chebyshev filter size (default: %(default)s)")
 
 
     args = parser.parse_args(argv)

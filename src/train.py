@@ -36,26 +36,24 @@ def main(argv):
 
     os.makedirs(args.save_dir, exist_ok=True)
 
-    project_name = 'encoder_'
-    if(args.use_graph_encoder):
-        project_name+=f'graph_{args.conv}_'
-    else:
-        project_name+='conv2d_'
-
-    project_name+='decoder_' 
-    if(args.use_graph_decoder):
-        project_name+=f'graph_{args.conv}'
-    else:
-        project_name+='conv2d' 
 
     wandb.init(
         project='graph-compression',
-        name=project_name,
+        name=args.project_name,
         config={
             'model': args.model,
             'epochs':args.epochs,
             'batch_size':args.batch_size,
-            'ConvType':args.conv if args.use_graph_encoder else 'conv2d',
+            'n_graph_encoder':args.n_graph_encoder,
+            'symmetric':args.symmetric,
+            'conv_layer':args.conv,
+            'aggr':args.aggr,
+            'graph_norm':args.graph_norm,
+            'activation':args.activation,
+            'knn':args.knn,
+            'loop':args.loop,
+            'use_ffn':args.use_ffn,
+            'use_fc':args.use_fc,
             'Dataset_size': args.dataset_size,
             'N':args.N,
             'M':args.M,
@@ -92,17 +90,55 @@ def main(argv):
     print("fine dataset")
     device = "cuda" if  torch.cuda.is_available() else "cpu"
 
+    N = args.N
+    n_graph_encoder = args.n_graph_encoder
+    symmetric = args.symmetric
+    conv_layer_full = args.conv
+    aggr = args.aggr
+    graph_norm = args.graph_norm
+    activation = args.activation
+    loop = args.loop
+    use_ffn = args.use_ffn
+    use_fc = args.use_fc
+    knn = args.knn
+
+    heads =1
+    cheb_k=1
+
+    if(conv_layer_full.startswith('gat')):
+        conv_layer = conv_layer_full.split('_')[0]
+        heads = int(conv_layer_full.split('_')[1])
+    elif(conv_layer_full.startswith('transformer')):
+        conv_layer = conv_layer_full.split('_')[0]
+        heads = int(conv_layer_full.split('_')[1])
+    elif(conv_layer_full.startswith('cheb')):
+        conv_layer = conv_layer_full.split('_')[0]
+        cheb_k = int(conv_layer_full.split('_')[1])
+    else:
+        conv_layer = conv_layer_full
+                                                
+    bipartite = True
+    if(conv_layer in ['cheb', 'gcn']):
+        bipartite = False
+
 
     if "graph" in args.model:
         net = image_models[args.model](
-            N = args.N, 
+            N = N, 
             M = args.M,
-            use_graph_encoder = args.use_graph_encoder, 
-            use_graph_decoder = args.use_graph_decoder, 
-            conv_type=args.conv,
-            bipartite = args.bipartite,
-            cheb_k = args.cheb_k,
-            graph_norm = args.graph_norm)
+            n_graph_encoder = n_graph_encoder,
+            symmetric = symmetric,
+            conv_type = conv_layer,
+            bipartite = bipartite,
+            cheb_k = cheb_k,
+            heads = heads,
+            activation = activation,
+            aggr = aggr,
+            knn = knn,
+            loop = loop,
+            use_ffn = use_ffn,
+            use_fc = use_fc,
+            graph_norm = graph_norm)
     else:
         net = image_models[args.model](quality = args.quality)
 
