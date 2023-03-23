@@ -551,7 +551,7 @@ class Downsample(nn.Module):
         super().__init__()        
         self.conv = nn.Sequential(
             nn.Conv2d(in_dim, out_dim, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_dim),
+            #nn.BatchNorm2d(out_dim),
         )
 
 
