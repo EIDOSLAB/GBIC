@@ -6,6 +6,22 @@ from compressai.optimizers import net_aux_optimizer
 import shutil
 from gcn_lib import Grapher, FFN, Downsample, Upsample
 
+
+def conv_graph(
+        in_channels, 
+        out_channels,
+        conv='sage', # graph stuff
+        cheb_k = 2,
+        heads = 1,
+        activation='none',
+        aggr = 'mean',
+        k=9,
+        loop = True,
+        ratio=[4,1], # graph stuff
+        norm = 'none'): # conv2d stuff
+    pass
+
+
 def conv(
         in_channels, 
         out_channels,
@@ -28,6 +44,7 @@ def conv(
     if(use_graph):
         grapher = Grapher(
                 in_channels=in_channels,
+                out_channels=out_channels,
                 knn=k,
                 bipartite=bipartite,
                 conv=conv,
@@ -40,28 +57,10 @@ def conv(
                 cheb_k=cheb_k,
                 loop=loop,
                 use_fc=use_fc)
-        ffn = FFN(
-                in_features=in_channels,
-                hidden_features=in_channels*4,
-                out_features=in_channels,
-                act=activation
-            )
-        down = Downsample(
-                in_dim=in_channels,
-                out_dim=out_channels
-            )
         
-        if(use_ffn):
-            return nn.Sequential(
-                grapher,
-                ffn,
-                down
-            )
-        else:
-            return nn.Sequential(
-                grapher,
-                down
-            )
+        return nn.Sequential(
+            grapher
+        )
     
     return nn.Conv2d(
         in_channels,

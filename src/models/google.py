@@ -16,7 +16,7 @@ from compressai.models.base import (
     CompressionModel,
  
 )
-from utils.functions import conv, deconv
+from utils.functions import conv, deconv, conv_graph
 
 from compressai.zoo import (
     bmshj2018_factorized,
@@ -61,54 +61,17 @@ class GBIC_FactorizedPrior(CompressionModel):
 
         self.entropy_bottleneck = EntropyBottleneck(M)
 
-        use_graph_encoder = [*([False]*(3-n_graph_encoder)), *([True]*n_graph_encoder)]
-        use_graph_decoder = [False,False,False]
-
-        if(symmetric and n_graph_encoder<3):
-            use_graph_decoder = [*([True]*n_graph_encoder),*([False]*(3-n_graph_encoder))]
 
         self.g_a = nn.Sequential(
             conv(3, N, use_graph=False),
             GDN(N),
 
-            conv(N, 
-                 N,
-                 use_graph=use_graph_encoder[0],
-                 bipartite=bipartite, 
-                 conv=conv_type,
-                 cheb_k=cheb_k, 
-                 heads=heads,
-                 activation=activation,
-                 aggr=aggr,
-                 k=knn,
-                 loop=loop,
-                 ratio=8, 
-                 norm=graph_norm,
-                 use_ffn=use_ffn,
-                 use_fc=use_fc),
+            conv(N, N, use_graph=False),
             GDN(N),
 
-            conv(N, 
-                 N,
-                 use_graph=use_graph_encoder[1],
-                 bipartite=bipartite, 
-                 conv=conv_type,
-                 cheb_k=cheb_k, 
-                 heads=heads,
-                 activation=activation,
-                 aggr=aggr,
-                 k=knn,
-                 loop=loop,
-                 ratio=4, 
-                 norm=graph_norm,
-                 use_ffn=use_ffn,
-                 use_fc=use_fc),
-            GDN(N),
-
-            conv(N, 
+            conv_graph(
+                 N, 
                  M,
-                 use_graph=use_graph_encoder[2],
-                 bipartite=bipartite, 
                  conv=conv_type,
                  cheb_k=cheb_k, 
                  heads=heads,
@@ -116,62 +79,24 @@ class GBIC_FactorizedPrior(CompressionModel):
                  aggr=aggr,
                  k=knn,
                  loop=loop,
-                 ratio=1, 
-                 norm=graph_norm,
-                 use_ffn=use_ffn,
-                 use_fc=use_fc)
+                 ratio=[4,1], 
+                 norm=graph_norm)
         )
 
         self.g_s = nn.Sequential(
             deconv(M, 
                    N,
-                   use_graph=use_graph_decoder[0],
-                   bipartite=bipartite, 
-                   conv=conv_type,
-                   cheb_k=cheb_k, 
-                   heads=heads,
-                   activation=activation,
-                   aggr=aggr,
-                   k=knn,
-                   loop=loop,
-                   ratio=1, 
-                   norm=graph_norm,
-                   use_ffn=use_ffn,
-                   use_fc=use_fc),
+                   use_graph=False),
             GDN(N, inverse=True),
 
             deconv(N, 
                    N,
-                   use_graph=use_graph_decoder[1],
-                   bipartite=bipartite, 
-                   conv=conv_type,
-                   cheb_k=cheb_k, 
-                   heads=heads,
-                   activation=activation,
-                   aggr=aggr,
-                   k=knn,
-                   loop=loop,
-                   ratio=4, 
-                   norm=graph_norm,
-                   use_ffn=use_ffn,
-                   use_fc=use_fc),
+                   use_graph=False),
             GDN(N, inverse=True),
 
             deconv(N, 
                    N,
-                   use_graph=use_graph_decoder[2],
-                   bipartite=bipartite, 
-                   conv=conv_type,
-                   cheb_k=cheb_k, 
-                   heads=heads,
-                   activation=activation,
-                   aggr=aggr,
-                   k=knn,
-                   loop=loop,
-                   ratio=8, 
-                   norm=graph_norm,
-                   use_ffn=use_ffn,
-                   use_fc=use_fc),
+                   use_graph=False),
             GDN(N, inverse=True),
 
             deconv(N, 3)
