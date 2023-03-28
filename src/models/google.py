@@ -41,20 +41,13 @@ class GBIC_FactorizedPrior(CompressionModel):
     def __init__(self, 
                  N, 
                  M,
-                 n_graph_encoder = 2,
-                 symmetric = False,
-                 
                  conv_type='sage',
-                 bipartite = True,
                  cheb_k = 2,
                  heads = 1,
-                 activation = 'none',
                  aggr = 'mean',
                  knn = 9,
                  loop = True,
-                 use_ffn =False,
-                 use_fc = False,
-                 graph_norm = 'none',
+                 recompute_graph = True,
                  **kwargs):
         
         super().__init__(**kwargs)
@@ -72,15 +65,13 @@ class GBIC_FactorizedPrior(CompressionModel):
             conv_graph(
                  N, 
                  M,
-                 conv=conv_type,
-                 cheb_k=cheb_k, 
-                 heads=heads,
-                 activation=activation,
+                 conv=conv_type, # not used
+                 cheb_k=cheb_k, # not used
+                 heads=heads, # not used
                  aggr=aggr,
                  k=knn,
                  loop=loop,
-                 ratio=[4,1], 
-                 norm=graph_norm)
+                 recompute_graph=recompute_graph)
         )
 
         self.g_s = nn.Sequential(
@@ -185,6 +176,19 @@ if __name__ == '__main__':
     x = torch.rand((8,3,256,256))
     x= x.to(device)
 
+    net = image_models['graph-factorized'](
+            N = 128, 
+            M =192,
+            aggr = 'max',
+            knn = 9,
+            loop = True,
+            recompute_graph = False
+        ).to(device)
+    
+    out = net(x)
+    print(out['x_hat'].shape)
+
+    sys.exit(1)
     for N in [128]:
         for n_graph_encoder in [3]:
             for symmetric in [True,False]:

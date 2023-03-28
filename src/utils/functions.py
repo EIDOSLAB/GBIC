@@ -4,22 +4,32 @@ import math
 from pytorch_msssim import ms_ssim
 from compressai.optimizers import net_aux_optimizer
 import shutil
-from gcn_lib import Grapher, FFN, Downsample, Upsample
+from gcn_lib import Grapher, FFN, Downsample, Upsample, MultiGrapher
 
 
 def conv_graph(
         in_channels, 
         out_channels,
-        conv='sage', # graph stuff
+        conv='sage', 
         cheb_k = 2,
         heads = 1,
-        activation='none',
         aggr = 'mean',
         k=9,
         loop = True,
-        ratio=[4,1], # graph stuff
-        norm = 'none'): # conv2d stuff
-    pass
+        recompute_graph = True): 
+    
+    return MultiGrapher(
+        in_channels=in_channels,
+        out_channels=out_channels,
+        knn=k,
+        conv=conv, # not used
+        heads=heads, # not used
+        aggr=aggr,
+        bias=True,
+        cheb_k=cheb_k, # not used
+        loop=loop,
+        recompute_graph=recompute_graph
+    )
 
 
 def conv(

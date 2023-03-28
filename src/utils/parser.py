@@ -34,12 +34,8 @@ def parse_args(argv):
     parser.add_argument("--graph-norm", type = str, default = "none")
     parser.add_argument("--activation", type = str, default = "none")
     parser.add_argument('--loop', action='store_true')
-    parser.add_argument('--use-ffn', action='store_true')
-    parser.add_argument('--use-fc', action='store_true')
     parser.add_argument("--knn", type=int, default=9)
-    parser.add_argument("--n-graph-encoder", type=int, default=2)
-    parser.add_argument('--symmetric', action='store_true', help="use graph encoder")
-    parser.add_argument('--bipartite', action='store_true', help="use bipartite graph")
+    parser.add_argument('--recompute-graph', action='store_true')
 
 
     args = parser.parse_args(argv)
