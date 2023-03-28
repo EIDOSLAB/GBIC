@@ -1,0 +1,5 @@
+{
+    "model":"baseline",
+    "model_path":"/scratch/GBIC_res/",
+    "image_path":"/scratch/dataset/kodak"
+}
