@@ -1,0 +1,5 @@
+{
+    "model_path":"/scratch/GBIC_res/",
+    "model":"graph-sweep",
+    "image_path":"/scratch/dataset/kodak"
+}
