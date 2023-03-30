@@ -272,7 +272,8 @@ def extract_specific_model_performance(metrics, type):
 Colors = {
     "graph-factorized": ["b",'--'],
     "none": ["b",'--'],
-    "graph-mr": ["b",'--'],
+    "graph-mr": ["b",'-'],
+    "graph-transf": ["g",'-'],
     "baseline": ["r",'-'],
     "bmshj2017-sos": ["b","-"],
 }
